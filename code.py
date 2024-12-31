@@ -1,4 +1,5 @@
 import board
+import color
 import displayio
 from adafruit_display_shapes.rect import Rect
 from adafruit_display_text import label
@@ -9,10 +10,9 @@ from sd_manager import SDManager  # Importar la biblioteca SDManager
 sd_manager = SDManager()
 
 # Crear un archivo nuevo en la tarjeta SD
-def crear_y_mostrar_archivo():
+def crear_archivo():
     if sd_manager.mounted:
         try:
-            # Nombre único para el archivo
             nuevo_archivo = "nuevo_archivo.txt"
             contenido = "Hola, este es un archivo creado desde CircuitPython.\n"
             sd_manager.escribir_archivo(nuevo_archivo, contenido)
@@ -22,69 +22,115 @@ def crear_y_mostrar_archivo():
     else:
         print("La tarjeta SD no está montada.")
 
-# Mostrar los archivos en el display
-def mostrar_archivos_en_display():
-    # Verificar si DISPLAY está disponible
+# Mostrar información en el display
+def mostrar_sd_info():
     if hasattr(board, "DISPLAY"):
         display = board.DISPLAY
-
-        # Crear un grupo de display
         splash = displayio.Group()
 
-        # Dibujar un rectángulo azul como fondo
-        color_bitmap = displayio.Bitmap(240, 135, 1)  # Tamaño y colores (1-bit)
+        # Fondo violeta
+        color_bitmap = displayio.Bitmap(240, 135, 1)
         color_palette = displayio.Palette(1)
-        color_palette[0] = 0b000000000000000011111111  # azul
+        color_palette[0] = color.violet
         bg_sprite = displayio.TileGrid(color_bitmap, pixel_shader=color_palette)
         splash.append(bg_sprite)
 
-        # Añadir un rectángulo rojo decorativo
-        rect = Rect(10, 10, 220, 50, fill=0b111111110000000000000000)
-        splash.append(rect)
+        # Encabezado
+        header = Rect(0, 0, 240, 30, fill=color.blue)
+        splash.append(header)
+        header_text = label.Label(
+            terminalio.FONT,
+            text="SD Card Info",
+            color=color.white,
+            scale=2,
+        )
+        header_text.x = 60
+        header_text.y = 10
+        splash.append(header_text)
 
-        # Verificar si la tarjeta SD está montada
+        # Línea separadora (usando un rectángulo delgado)
+        separator = Rect(0, 30, 240, 2, fill=color.white)
+        splash.append(separator)
+
+        # Mostrar detalles de la SD
         if sd_manager.mounted:
-            archivos = sd_manager.listar_archivos()  # Listar archivos de la tarjeta SD
-            if archivos:
-                # Mostrar los nombres de los archivos en la pantalla
-                y_offset = 60  # Coordenada Y inicial para el texto
-                for archivo in archivos:
-                    text_area = label.Label(
+            detalles = sd_manager.detalles_tarjeta()
+
+            if detalles:
+                capacidad_text = label.Label(
+                    terminalio.FONT,
+                    text=f"Capacidad: {detalles['capacidad_total']:.2f} MB",
+                    color=color.green
+                )
+                capacidad_text.x = 10
+                capacidad_text.y = 40
+                splash.append(capacidad_text)
+
+                libre_text = label.Label(
+                    terminalio.FONT,
+                    text=f"Libre: {detalles['espacio_libre']:.2f} MB",
+                    color=color.cyan
+                )
+                libre_text.x = 10
+                libre_text.y = 55
+                splash.append(libre_text)
+
+                usado_text = label.Label(
+                    terminalio.FONT,
+                    text=f"Usado: {detalles['espacio_utilizado']:.2f} MB",
+                    color=color.yellow
+                )
+                usado_text.x = 10
+                usado_text.y = 70
+                splash.append(usado_text)
+
+                # Archivos en la SD
+                archivos_text = label.Label(
+                    terminalio.FONT,
+                    text="Archivos:",
+                    color=color.orange
+                )
+                archivos_text.x = 10
+                archivos_text.y = 90
+                splash.append(archivos_text)
+
+                y_offset = 105
+                for archivo in detalles["archivos"]:
+                    archivo_label = label.Label(
                         terminalio.FONT,
                         text=archivo,
-                        color=0xFFFFFF
+                        color=color.white
                     )
-                    text_area.x = 10
-                    text_area.y = y_offset
-                    splash.append(text_area)
-                    y_offset += 15  # Incrementar para el siguiente archivo
+                    archivo_label.x = 15
+                    archivo_label.y = y_offset
+                    splash.append(archivo_label)
+                    y_offset += 10
             else:
-                # Mostrar mensaje si no hay archivos
-                no_files_text = label.Label(
+                no_sd_text = label.Label(
                     terminalio.FONT,
-                    text="No hay archivos en la SD.",
-                    color=0xFFFFFF
+                    text="No se pudo obtener info.",
+                    color=color.red
                 )
-                no_files_text.x = 10
-                no_files_text.y = 60
-                splash.append(no_files_text)
+                no_sd_text.x = 10
+                no_sd_text.y = 40
+                splash.append(no_sd_text)
         else:
-            # Mostrar mensaje si la SD no está montada
+            # SD no montada
             error_text = label.Label(
                 terminalio.FONT,
                 text="SD no montada.",
-                color=0xFFFF00
+                color=color.red
             )
             error_text.x = 10
-            error_text.y = 60
+            error_text.y = 40
             splash.append(error_text)
 
-        # Asignar el grupo al display usando root_group
+        # Asignar el grupo al display
         display.root_group = splash
-        print("Archivos de la SD mostrados en el display.")
+        print("Información mostrada en el display.")
     else:
         print("Objeto DISPLAY no encontrado.")
 
-# Crear el archivo y mostrar los archivos en el display
-crear_y_mostrar_archivo()
-mostrar_archivos_en_display()
+# Crear un archivo y mostrar información de la SD en el display
+crear_archivo()
+mostrar_sd_info()
