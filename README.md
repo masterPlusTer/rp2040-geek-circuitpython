@@ -14,4 +14,4 @@ IMPORTANTE, esto depende de las siguientes librerias externas:
 - adafruit_display_shapes
 - adafruit_display_text
 
-descargate el Community Bundle de la pagina oficial de circuit python, copia estas dos librerias y pegalas en el directorio /lib de tu dispositivo 
+descargate el Adafruit Circuitpython Bundle de la pagina oficial de circuit python, copia estas dos librerias y pegalas en el directorio /lib de tu dispositivo 
