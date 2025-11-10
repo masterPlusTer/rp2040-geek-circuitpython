@@ -9,16 +9,59 @@ from sd_manager import SDManager  # Importar la biblioteca SDManager
 # Crear una instancia del administrador de la tarjeta SD
 sd_manager = SDManager()
 
+# ---------------------- Utilidad: siguiente nombre incremental ----------------------
+def siguiente_nombre_incremental(base="archivo", ext="txt", carpeta="/"):
+    """
+    Busca en la carpeta dada archivos tipo:
+      'archivo 1.txt', 'archivo 2.txt', ...
+    y devuelve el siguiente nombre disponible.
+    No usa regex para maximizar compatibilidad en CircuitPython.
+    """
+    if not sd_manager.mounted:
+        # No hay SD, no nos hagamos ilusiones
+        return f"{base} 1.{ext}"
+
+    try:
+        existentes = sd_manager.listar(carpeta)
+    except Exception:
+        existentes = []
+
+    prefijo = f"{base} "
+    sufijo = f".{ext}"
+    max_n = 0
+
+    for nombre in existentes:
+        if not nombre.endswith(sufijo):
+            continue
+        if not nombre.startswith(prefijo):
+            continue
+        # Extraer la parte numérica entre "base " y ".ext"
+        medio = nombre[len(prefijo):-len(sufijo)]
+        # Permite espacios accidentales: "archivo   7.txt"
+        medio = medio.strip()
+        # Intenta convertir a entero
+        try:
+            n = int(medio)
+            if n > max_n:
+                max_n = n
+        except ValueError:
+            # No es un número válido: lo ignoramos
+            pass
+
+    siguiente = max_n + 1
+    return f"{base} {siguiente}.{ext}"
+
 # Crear un archivo nuevo en la tarjeta SD
-def crear_archivo():
+def crear_archivo_incremental():
     if sd_manager.mounted:
         try:
-            nuevo_archivo = "nuevo_archivo.txt"
+            nombre = siguiente_nombre_incremental(base="archivo", ext="txt", carpeta="/")
             contenido = "Hola, este es un archivo creado desde CircuitPython.\n"
-            sd_manager.escribir_archivo(nuevo_archivo, contenido)
-            print(f"Archivo '{nuevo_archivo}' creado con éxito.")
+            # Usa crear_archivo para fallar si existe (no debería existir)
+            sd_manager.crear_archivo(nombre, contenido)
+            print(f"Archivo '{nombre}' creado con éxito.")
         except Exception as e:
-            print(f"Error al crear el archivo '{nuevo_archivo}':", e)
+            print(f"Error al crear el archivo incremental: {e}")
     else:
         print("La tarjeta SD no está montada.")
 
@@ -28,15 +71,15 @@ def mostrar_sd_info():
         display = board.DISPLAY
         splash = displayio.Group()
 
-        # Fondo violeta
-        color_bitmap = displayio.Bitmap(240, 135, 1)
+        # Fondo violeta superior
+        color_bitmap = displayio.Bitmap(240, 15, 1)
         color_palette = displayio.Palette(1)
         color_palette[0] = color.violet
         bg_sprite = displayio.TileGrid(color_bitmap, pixel_shader=color_palette)
         splash.append(bg_sprite)
 
         # Encabezado
-        header = Rect(0, 0, 240, 30, fill=color.blue)
+        header = Rect(0, 0, 240, 30, fill=color.red)
         splash.append(header)
         header_text = label.Label(
             terminalio.FONT,
@@ -48,7 +91,7 @@ def mostrar_sd_info():
         header_text.y = 10
         splash.append(header_text)
 
-        # Línea separadora (usando un rectángulo delgado)
+        # Línea separadora
         separator = Rect(0, 30, 240, 2, fill=color.white)
         splash.append(separator)
 
@@ -57,6 +100,7 @@ def mostrar_sd_info():
             detalles = sd_manager.detalles_tarjeta()
 
             if detalles:
+                # Tu SDManager ya devuelve alias: capacidad_total, espacio_libre, espacio_utilizado, archivos
                 capacidad_text = label.Label(
                     terminalio.FONT,
                     text=f"Capacidad: {detalles['capacidad_total']:.2f} MB",
@@ -132,5 +176,5 @@ def mostrar_sd_info():
         print("Objeto DISPLAY no encontrado.")
 
 # Crear un archivo y mostrar información de la SD en el display
-crear_archivo()
+crear_archivo_incremental()
 mostrar_sd_info()
