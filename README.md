@@ -183,30 +183,30 @@ import storage
 storage.umount("/sd")
 
 📚 Resumen rápido de comandos
-Acción	Comando
+Acción		==> Comando
 
-Montar SD	sd = SDManager()
+Montar SD		==> sd = SDManager()
 
-Listar archivos	sd.listar("/")
+Listar archivos		==> sd.listar("/")
 
-Crear archivo	sd.crear_archivo("a.txt", "texto")
+Crear archivo		==> sd.crear_archivo("a.txt", "texto")
 
-Escribir (sobrescribir)	sd.escribir_archivo("a.txt", "nuevo texto")
+Escribir (sobrescribir)		==> sd.escribir_archivo("a.txt", "nuevo texto")
 
-Anexar contenido	sd.anexar_archivo("a.txt", "línea más\n")
+Anexar contenido		==> sd.anexar_archivo("a.txt", "línea más\n")
 
-Leer archivo	sd.leer_archivo("a.txt")
+Leer archivo		==> sd.leer_archivo("a.txt")
 
-Renombrar	sd.renombrar_archivo("a.txt", "b.txt")
+Renombrar		==> sd.renombrar_archivo("a.txt", "b.txt")
 
-Copiar	sd.copiar_archivo("b.txt", "copia.txt")
+Copiar		==> sd.copiar_archivo("b.txt", "copia.txt")
 
-Mover	sd.mover_archivo("copia.txt", "sub/copia.txt")
+Mover		==> sd.mover_archivo("copia.txt", "sub/copia.txt")
 
-Borrar archivo	sd.borrar_archivo("b.txt")
+Borrar archivo		==> sd.borrar_archivo("b.txt")
 
-Crear carpeta	sd.crear_directorio("sub")
+Crear carpeta		==> sd.crear_directorio("sub")
 
-Borrar carpeta recursiva	sd.borrar_directorio("sub", recursivo=True)
+Borrar carpeta recursiva		==> sd.borrar_directorio("sub", recursivo=True)
 
-Consultar detalles SD	sd.detalles_tarjeta()
+Consultar detalles SD	   ==> sd.detalles_tarjeta()
