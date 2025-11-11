@@ -3,11 +3,11 @@ import displayio
 import shapes
 import terminalio
 import color
-from sd_manager import SDManager 
+from sd_manager import SDManager
 
 sd_manager = SDManager()
 
-# ---------------------- new file with an incremental name----------------------
+# ---------------------- new file with an incremental name ----------------------
 def siguiente_nombre_incremental(base="archivo", ext="txt", carpeta="/"):
     if not sd_manager.mounted:
         return f"{base} 1.{ext}"
@@ -44,9 +44,13 @@ def crear_archivo_incremental():
     else:
         print("La tarjeta SD no está montada.")
 
-# ---------------------- text with terminalio.FONT ----------------------
+# ---------------------- text with terminalio.FONT (scaled) ----------------------
 FONT = terminalio.FONT
 CELL_W, CELL_H = FONT.get_bounding_box()
+
+# Cambiá esto para ajustar el tamaño del texto (1 = normal, 2 = x2, etc.)
+SCALE = 2
+LINE_SP = 2  # espacio extra entre líneas en píxeles (post-escala)
 
 def make_palette(fg=color.white, bg=color.black):
     pal = displayio.Palette(2)
@@ -54,28 +58,38 @@ def make_palette(fg=color.white, bg=color.black):
     pal[1] = fg
     return pal
 
-def make_line(display, y_px, fg=color.white, bg=color.black, text="", x_px=0, max_width_px=None):
+def make_line(display, y_px, fg=color.white, bg=color.black, text="", x_px=0, max_width_px=None, scale=SCALE):
     """
-    Crea un TileGrid (1 fila) a y_px con color fg/bg. Escribe 'text' desde x_px.
-    No usa cursor_position; el posicionamiento se hace en píxeles con x_px.
+    Crea un Group escalado con un TileGrid (1 fila) a y_px.
+    Posiciona el Group con (x_px, y_px) y respeta el ancho visible según la escala.
     """
-    cols = (display.width // CELL_W) if max_width_px is None else (max_width_px // CELL_W)
     palette = make_palette(fg, bg)
+
+    # Ancho en píxeles disponible (restando x_px); si dan max_width_px, usarlo.
+    pixels_available = (display.width - x_px) if max_width_px is None else max_width_px
+    # Cada celda ocupa CELL_W * scale en pantalla al final
+    visible_cols = max(1, pixels_available // (CELL_W * max(1, scale)))
+
+    # El TileGrid trabaja en celdas, no escaladas
     grid = displayio.TileGrid(
         FONT.bitmap,
         pixel_shader=palette,
         tile_width=CELL_W,
         tile_height=CELL_H,
-        width=cols,
+        width=visible_cols,
         height=1,
-        x=x_px,
-        y=y_px,
+        x=0,
+        y=0,
     )
+
     term = terminalio.Terminal(grid, FONT)
-    # write clean line
     if text:
-        term.write(text[:cols])
-    return grid, term
+        term.write(text[:visible_cols])
+
+    # Envolvemos en un Group con escala y posición en píxeles
+    g = displayio.Group(scale=max(1, scale), x=x_px, y=y_px)
+    g.append(grid)
+    return g, term
 
 # ---------------------- main screen ----------------------
 def mostrar_sd_info():
@@ -86,7 +100,7 @@ def mostrar_sd_info():
     display = board.DISPLAY
     splash = displayio.Group()
 
-    # backround color
+    # background color
     top = shapes.rect(0, 0, display.width, 15, fill=color.violet)
     splash.append(top)
 
@@ -94,36 +108,43 @@ def mostrar_sd_info():
     header = shapes.rect(0, 0, display.width, 30, fill=color.red)
     splash.append(header)
 
-    # Title
+    # Title (centrado a ojo en píxeles, pero ajustando por cols visibles con la escala)
     title = "SD Card Info"
-    total_cols = display.width // CELL_W
-    x_title = max(0, ((total_cols - len(title)) // 2) * CELL_W)
-    line, _ = make_line(display, y_px=8, fg=color.white, bg=color.red, text=title, x_px=x_title)
-    splash.append(line)
+    # cols en pantalla teniendo en cuenta la escala
+    total_cols_scaled = display.width // (CELL_W * max(1, SCALE))
+    x_title_cols = max(0, (total_cols_scaled - len(title)) // 2)
+    x_title = x_title_cols * CELL_W * max(1, SCALE)
+    title_group, _ = make_line(display, y_px=8, fg=color.white, bg=color.red, text=title, x_px=x_title, scale=SCALE)
+    splash.append(title_group)
 
     # spacer
     separator = shapes.rect(0, 30, display.width, 2, fill=color.white)
     splash.append(separator)
 
+    # Cálculo de salto vertical por línea según escala
+    line_step = CELL_H * max(1, SCALE) + LINE_SP
+
     y = 40
     if sd_manager.mounted:
         detalles = sd_manager.detalles_tarjeta()
         if detalles:
-            g, _ = make_line(display, y_px=y,   fg=color.green,  text=f"Capacidad: {detalles['capacidad_total']:.2f} MB"); splash.append(g); y += 15
-            g, _ = make_line(display, y_px=y,   fg=color.cyan,   text=f"Libre:     {detalles['espacio_libre']:.2f} MB");   splash.append(g); y += 15
-            g, _ = make_line(display, y_px=y,   fg=color.yellow, text=f"Usado:     {detalles['espacio_utilizado']:.2f} MB"); splash.append(g); y += 20
-            g, _ = make_line(display, y_px=y,   fg=color.orange, text="Archivos:"); splash.append(g); y += 15
+            g, _ = make_line(display, y_px=y,   fg=color.green,  text=f"Capacidad: {detalles['capacidad_total']:.2f} MB", scale=SCALE); splash.append(g); y += line_step
+            g, _ = make_line(display, y_px=y,   fg=color.cyan,   text=f"Libre:     {detalles['espacio_libre']:.2f} MB",   scale=SCALE); splash.append(g); y += line_step
+            g, _ = make_line(display, y_px=y,   fg=color.yellow, text=f"Usado:     {detalles['espacio_utilizado']:.2f} MB", scale=SCALE); splash.append(g); y += line_step + (LINE_SP * 2)
 
+            g, _ = make_line(display, y_px=y,   fg=color.orange, text="Archivos:", scale=SCALE); splash.append(g); y += line_step
+
+            # Listado de archivos (controlando el borde inferior con la altura escalada)
             for nombre in detalles.get("archivos", []):
-                if y + CELL_H > display.height:
+                if y + (CELL_H * max(1, SCALE)) > display.height:
                     break
-                g, _ = make_line(display, y_px=y, fg=color.white, text=f"  {nombre}")
-                splash.append(g); y += 12
+                g, _ = make_line(display, y_px=y, fg=color.white, text=f"  {nombre}", scale=SCALE)
+                splash.append(g); y += line_step
         else:
-            g, _ = make_line(display, y_px=y, fg=color.red, text="No se pudo obtener info.")
+            g, _ = make_line(display, y_px=y, fg=color.red, text="No se pudo obtener info.", scale=SCALE)
             splash.append(g)
     else:
-        g, _ = make_line(display, y_px=y, fg=color.red, text="SD no montada.")
+        g, _ = make_line(display, y_px=y, fg=color.red, text="SD no montada.", scale=SCALE)
         splash.append(g)
 
     display.root_group = splash
