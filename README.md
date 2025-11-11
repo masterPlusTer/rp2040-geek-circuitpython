@@ -11,13 +11,7 @@ despues voy a hacer un modulo que encapsule toda la complejidad para que se pued
 IMPORTANTE, debes flashearle el firmware de la pagina oficial de circuit python https://circuitpython.org/board/waveshare_rp2040_geek/ si usas otro no funcionara
 
 
-IMPORTANTE TAMBIEN, esto depende de las siguientes librerias externas:
 
-- adafruit_display_shapes
-- adafruit_display_text
-
-
-descargate el Adafruit Circuitpython Bundle de la pagina oficial de circuit python, copia estas dos librerias y pegalas en el directorio /lib de tu dispositivo 
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
